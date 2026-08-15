@@ -1,0 +1,120 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Restaurant {
+  id           String                   @id @default(cuid())
+  slug         String                   @unique
+  logoUrl      String?
+  coverUrl     String?
+  phone        String?
+  address      String?
+  hours        String?
+  currency     String                   @default("VND")
+  isActive     Boolean                  @default(true)
+  venueType    String                   @default("qsr")
+  defaultLang  String                   @default("vi")
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  categories   Category[]
+  translations RestaurantTranslation[]
+}
+
+model RestaurantTranslation {
+  id           String     @id @default(cuid())
+  restaurantId String
+  locale       String
+  name         String
+  description  String?
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, locale])
+}
+
+model Category {
+  id           String                 @id @default(cuid())
+  restaurantId String
+  sortOrder    Int                    @default(0)
+  isActive     Boolean                @default(true)
+  restaurant   Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items        MenuItem[]
+  translations CategoryTranslation[]
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  locale     String
+  name       String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+}
+
+model MenuItem {
+  id           String                 @id @default(cuid())
+  categoryId   String
+  price        Float
+  imageUrl     String?
+  isAvailable  Boolean                @default(true)
+  isFeatured   Boolean                @default(false)
+  sortOrder    Int                    @default(0)
+  category     Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations MenuItemTranslation[]
+}
+
+model MenuItemTranslation {
+  id          String   @id @default(cuid())
+  menuItemId  String
+  locale      String
+  name        String
+  description String?
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, locale])
+}
+
+model Language {
+  code       String  @id
+  name       String
+  nativeName String
+  isEnabled  Boolean @default(true)
+  sortOrder  Int     @default(0)
+}
+
+model AdminUser {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+}
+
+model SiteSettings {
+  id                 String  @id @default("default")
+  siteName           String  @default("QRMenu")
+  logoUrl            String?
+  publicBaseUrl      String?
+  qrRevision         Int     @default(0)
+  primaryColor       String  @default("#DC2626")
+  secondaryColor     String  @default("#F87171")
+  ctaColor           String  @default("#CA8A04")
+  backgroundColor    String  @default("#FEF2F2")
+  textColor          String  @default("#450A0A")
+  adsEnabled         Boolean @default(false)
+  adsIdleSeconds     Int     @default(10)
+  adsSlideSeconds    Int     @default(8)
+}
+
+model AdSlide {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

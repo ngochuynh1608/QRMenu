@@ -1,0 +1,70 @@
+import Link from "next/link";
+import {
+  ChefHat,
+  Globe,
+  LayoutDashboard,
+  LogOut,
+  Megaphone,
+  QrCode,
+  Settings,
+  Store,
+} from "lucide-react";
+import { logoutAction } from "../actions";
+
+export const dynamic = "force-dynamic";
+
+const NAV = [
+  { href: "/admin", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/admin/restaurants", label: "Nhà hàng", icon: Store },
+  { href: "/admin/qr", label: "Cập nhật QR", icon: QrCode },
+  { href: "/admin/languages", label: "Ngôn ngữ", icon: Globe },
+  { href: "/admin/ads", label: "Quảng cáo", icon: Megaphone },
+  { href: "/admin/settings", label: "Thiết lập", icon: Settings },
+];
+
+export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-dvh bg-background">
+      <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <Link href="/admin" className="flex cursor-pointer items-center gap-2 text-text">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
+              <ChefHat className="h-5 w-5" />
+            </span>
+            <span className="font-heading text-lg">QRMenu Admin</span>
+          </Link>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <LogOut className="h-4 w-4" />
+              Đăng xuất
+            </button>
+          </form>
+        </div>
+        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 scrollbar-hide">
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-background hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          ))}
+          <Link
+            href="/"
+            className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:text-primary"
+          >
+            QR công khai
+          </Link>
+        </nav>
+      </header>
+      <div className="mx-auto max-w-6xl px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+        {children}
+      </div>
+    </div>
+  );
+}

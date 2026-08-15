@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #dc2626;
+  --color-primary-dark: #b91c1c;
+  --color-secondary: #f87171;
+  --color-cta: #ca8a04;
+  --color-cta-dark: #a16207;
+  --color-background: #fef2f2;
+  --color-surface: #ffffff;
+  --color-text: #450a0a;
+  --color-muted: #7f1d1d;
+  --color-border: #fecaca;
+  --font-heading: var(--font-be-vietnam), "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-be-vietnam), "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: 0 4px 6px rgba(69, 10, 10, 0.08);
+  --shadow-lift: 0 10px 15px rgba(69, 10, 10, 0.1);
+}
+
+html {
+  scroll-behavior: smooth;
+  touch-action: manipulation;
+  background-color: var(--color-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
