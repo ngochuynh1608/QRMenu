@@ -1,12 +1,39 @@
+import { Prisma } from "@prisma/client";
+import type { SiteSettings } from "@prisma/client";
 import { prisma } from "./prisma";
 import { pickTranslation } from "./utils";
 import type { CSSProperties } from "react";
 
+function isMissingTable(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021";
+}
+
+const FALLBACK_SETTINGS: SiteSettings = {
+  id: "default",
+  siteName: "QRMenu",
+  logoUrl: null,
+  publicBaseUrl: null,
+  qrRevision: 0,
+  primaryColor: "#DC2626",
+  secondaryColor: "#F87171",
+  ctaColor: "#CA8A04",
+  backgroundColor: "#FEF2F2",
+  textColor: "#450A0A",
+  adsEnabled: false,
+  adsIdleSeconds: 10,
+  adsSlideSeconds: 8,
+};
+
 export async function getEnabledLanguages() {
-  return prisma.language.findMany({
-    where: { isEnabled: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  try {
+    return await prisma.language.findMany({
+      where: { isEnabled: true },
+      orderBy: { sortOrder: "asc" },
+    });
+  } catch (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
 }
 
 export async function getAllLanguages() {
@@ -14,11 +41,16 @@ export async function getAllLanguages() {
 }
 
 export async function getPublicRestaurants() {
-  return prisma.restaurant.findMany({
-    where: { isActive: true },
-    include: { translations: true },
-    orderBy: { createdAt: "asc" },
-  });
+  try {
+    return await prisma.restaurant.findMany({
+      where: { isActive: true },
+      include: { translations: true },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
 }
 
 export async function getRestaurantMenu(slug: string) {
@@ -42,18 +74,28 @@ export async function getRestaurantMenu(slug: string) {
 }
 
 export async function getSiteSettings() {
-  const existing = await prisma.siteSettings.findUnique({ where: { id: "default" } });
-  if (existing) return existing;
-  return prisma.siteSettings.create({
-    data: { id: "default" },
-  });
+  try {
+    const existing = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    if (existing) return existing;
+    return await prisma.siteSettings.create({
+      data: { id: "default" },
+    });
+  } catch (error) {
+    if (isMissingTable(error)) return FALLBACK_SETTINGS;
+    throw error;
+  }
 }
 
 export async function getActiveAdSlides() {
-  return prisma.adSlide.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  try {
+    return await prisma.adSlide.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+    });
+  } catch (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
 }
 
 export async function getAllAdSlides() {
