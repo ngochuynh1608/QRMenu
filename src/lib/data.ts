@@ -1,11 +1,18 @@
-import { Prisma } from "@prisma/client";
 import type { SiteSettings } from "@prisma/client";
 import { prisma } from "./prisma";
 import { pickTranslation } from "./utils";
 import type { CSSProperties } from "react";
 
-function isMissingTable(error: unknown) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021";
+function prismaErrorCode(error: unknown) {
+  if (error && typeof error === "object" && "code" in error) {
+    return String((error as { code: unknown }).code);
+  }
+  return "";
+}
+
+function isSchemaUnavailable(error: unknown) {
+  const code = prismaErrorCode(error);
+  return code === "P2021" || code === "P2022" || code === "P2010";
 }
 
 const FALLBACK_SETTINGS: SiteSettings = {
@@ -31,7 +38,7 @@ export async function getEnabledLanguages() {
       orderBy: { sortOrder: "asc" },
     });
   } catch (error) {
-    if (isMissingTable(error)) return [];
+    if (isSchemaUnavailable(error)) return [];
     throw error;
   }
 }
@@ -48,7 +55,7 @@ export async function getPublicRestaurants() {
       orderBy: { createdAt: "asc" },
     });
   } catch (error) {
-    if (isMissingTable(error)) return [];
+    if (isSchemaUnavailable(error)) return [];
     throw error;
   }
 }
@@ -81,8 +88,8 @@ export async function getSiteSettings() {
       data: { id: "default" },
     });
   } catch (error) {
-    if (isMissingTable(error)) return FALLBACK_SETTINGS;
-    throw error;
+    console.error("[getSiteSettings] database unavailable, using fallback", error);
+    return FALLBACK_SETTINGS;
   }
 }
 
@@ -93,7 +100,7 @@ export async function getActiveAdSlides() {
       orderBy: { sortOrder: "asc" },
     });
   } catch (error) {
-    if (isMissingTable(error)) return [];
+    if (isSchemaUnavailable(error)) return [];
     throw error;
   }
 }

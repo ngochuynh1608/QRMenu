@@ -3,6 +3,8 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import { brandStyleVars, getSiteSettings } from "@/lib/data";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 const beVietnam = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700"],
