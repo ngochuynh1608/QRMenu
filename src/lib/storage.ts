@@ -5,6 +5,16 @@ import path from "path";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
+export function isImageStorageConfigured() {
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      process.env.CLOUDINARY_URL ||
+      (process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET),
+  );
+}
+
 function safeExt(filename: string) {
   const ext = path.extname(filename).toLowerCase();
   if ([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"].includes(ext)) return ext;
@@ -76,4 +86,27 @@ export async function uploadImage(file: File) {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, name), bytes);
   return `/uploads/${name}`;
+}
+
+export async function uploadImageFromUrl(url: string) {
+  if (!url || url.startsWith("/uploads/")) return url;
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(25000),
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    },
+  });
+  if (!res.ok) throw new Error(`Không tải được ảnh (${res.status})`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.byteLength > MAX_BYTES) throw new Error("Ảnh tối đa 8MB");
+  let ext = ".jpg";
+  try {
+    ext = safeExt(new URL(url).pathname);
+  } catch {
+    ext = ".jpg";
+  }
+  const type = res.headers.get("content-type") || "image/jpeg";
+  const file = new File([new Uint8Array(buffer)], `import${ext}`, { type });
+  return uploadImage(file);
 }

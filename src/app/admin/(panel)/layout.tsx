@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ChefHat,
+  CircleUser,
   Globe,
   LayoutDashboard,
   LogOut,
@@ -10,6 +11,9 @@ import {
   Store,
 } from "lucide-react";
 import { logoutAction } from "../actions";
+import { prisma } from "@/lib/prisma";
+import { pickTranslation } from "@/lib/utils";
+import { ImportNavButton } from "@/components/admin/ImportNavButton";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +24,15 @@ const NAV = [
   { href: "/admin/languages", label: "Ngôn ngữ", icon: Globe },
   { href: "/admin/ads", label: "Quảng cáo", icon: Megaphone },
   { href: "/admin/settings", label: "Thiết lập", icon: Settings },
+  { href: "/admin/account", label: "Tài khoản", icon: CircleUser },
 ];
 
-export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+  const restaurants = await prisma.restaurant.findMany({
+    include: { translations: true },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
@@ -54,6 +64,15 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
               {item.label}
             </Link>
           ))}
+          <ImportNavButton
+            restaurants={restaurants.map((restaurant) => ({
+              id: restaurant.id,
+              slug: restaurant.slug,
+              name:
+                pickTranslation(restaurant.translations, restaurant.defaultLang, "vi")?.name ||
+                restaurant.slug,
+            }))}
+          />
           <Link
             href="/"
             className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:text-primary"

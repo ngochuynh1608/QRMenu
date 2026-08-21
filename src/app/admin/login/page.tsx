@@ -33,7 +33,6 @@ export default async function AdminLoginPage({
               type="email"
               required
               autoComplete="username"
-              defaultValue="admin@qrmenu.local"
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
           </label>
@@ -44,7 +43,6 @@ export default async function AdminLoginPage({
               type="password"
               required
               autoComplete="current-password"
-              defaultValue="admin123"
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
           </label>

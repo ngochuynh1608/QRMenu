@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
+    "menu:scrape": "tsx scripts/scrape-grandvrio-menu.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

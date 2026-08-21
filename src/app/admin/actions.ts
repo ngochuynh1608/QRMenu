@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { login, logout, requireSession } from "@/lib/auth";
+import { login, logout, requireSession, updateAdminAccount } from "@/lib/auth";
 
 function formString(form: FormData, key: string) {
   const value = form.get(key);
@@ -39,6 +39,36 @@ export async function loginAction(form: FormData) {
 export async function logoutAction() {
   await logout();
   redirect("/admin/login");
+}
+
+export async function updateAdminAccountAction(form: FormData) {
+  const session = await requireSession();
+  const email = formString(form, "email");
+  const currentPassword = formString(form, "currentPassword");
+  const newPassword = typeof form.get("newPassword") === "string" ? String(form.get("newPassword")) : "";
+  const confirmPassword =
+    typeof form.get("confirmPassword") === "string" ? String(form.get("confirmPassword")) : "";
+
+  if (!currentPassword) {
+    redirect("/admin/account?error=current");
+  }
+  if (newPassword !== confirmPassword) {
+    redirect("/admin/account?error=mismatch");
+  }
+
+  const result = await updateAdminAccount({
+    userId: session.id,
+    email,
+    currentPassword,
+    newPassword,
+  });
+
+  if (!result.ok) {
+    redirect(`/admin/account?error=${result.error}`);
+  }
+
+  revalidatePath("/admin/account");
+  redirect("/admin/account?saved=1");
 }
 
 export async function saveRestaurant(form: FormData) {
