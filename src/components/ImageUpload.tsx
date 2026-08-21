@@ -91,7 +91,16 @@ export function ImageUpload({ name, label, defaultValue, expectedSize, hint }: P
         className="hidden"
         onChange={(event) => onFile(event.target.files?.[0])}
       />
-      {error ? <p className="text-sm text-primary">{error}</p> : null}
+      {error ? (
+        <div className="space-y-1 text-sm text-primary">
+          <p>{error}</p>
+          {error.includes("BLOB_READ_WRITE_TOKEN") ? (
+            <p className="text-muted">
+              Vercel → project → Storage → Create Blob → Connect to Project → Redeploy.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
