@@ -52,7 +52,7 @@ export async function getPublicRestaurants() {
     return await prisma.restaurant.findMany({
       where: { isActive: true },
       include: { translations: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
   } catch (error) {
     if (isSchemaUnavailable(error)) return [];

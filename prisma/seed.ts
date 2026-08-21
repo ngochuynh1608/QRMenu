@@ -432,7 +432,7 @@ const venues: VenueSeed[] = [
   },
 ];
 
-async function seedVenue(venue: VenueSeed) {
+async function seedVenue(venue: VenueSeed, sortOrder: number) {
   const restaurant = await prisma.restaurant.create({
     data: {
       slug: venue.slug,
@@ -445,6 +445,7 @@ async function seedVenue(venue: VenueSeed) {
       currency: "VND",
       defaultLang: "en",
       isActive: true,
+      sortOrder,
       translations: {
         create: venue.translations.map((t) => ({
           locale: t.locale,
@@ -537,8 +538,8 @@ async function main() {
     },
   });
 
-  for (const venue of venues) {
-    await seedVenue(venue);
+  for (const [index, venue] of venues.entries()) {
+    await seedVenue(venue, index);
   }
 
   console.log("Seeded: admin@qrmenu.local / admin123");

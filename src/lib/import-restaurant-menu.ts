@@ -121,8 +121,12 @@ export async function importAllMenus(options: {
   const extraImages = withSlug.flatMap((item) => [item.coverUrl, item.logoUrl]).filter((url): url is string => Boolean(url));
   await mapPool([...new Set(extraImages)], 4, (url) => copyUrl(url, copyImages, cache));
 
-  const existing = await prisma.restaurant.findMany({ select: { id: true, slug: true } });
+  const existing = await prisma.restaurant.findMany({
+    select: { id: true, slug: true, sortOrder: true },
+    orderBy: { sortOrder: "desc" },
+  });
   const bySlug = new Map(existing.map((item) => [item.slug, item.id]));
+  let nextSort = (existing[0]?.sortOrder ?? -1) + 1;
 
   let updated = 0;
   let created = 0;
@@ -144,9 +148,11 @@ export async function importAllMenus(options: {
           venueType,
           coverUrl,
           logoUrl,
+          sortOrder: nextSort,
           translations: { create: translations.length ? translations : [{ locale: "vi", name: restaurantName(restaurant) }] },
         },
       });
+      nextSort += 1;
       restaurantId = createdRestaurant.id;
       bySlug.set(slug, restaurantId);
       created += 1;

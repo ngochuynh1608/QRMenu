@@ -30,7 +30,7 @@ const NAV = [
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const restaurants = await prisma.restaurant.findMany({
     include: { translations: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   return (

@@ -104,9 +104,14 @@ export async function saveRestaurant(form: FormData) {
       },
     });
   } else {
+    const last = await prisma.restaurant.findFirst({
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
     const created = await prisma.restaurant.create({
       data: {
         ...data,
+        sortOrder: (last?.sortOrder ?? -1) + 1,
         translations: { create: translations },
       },
     });
@@ -116,6 +121,20 @@ export async function saveRestaurant(form: FormData) {
 
   revalidatePublicAndAdmin(slug);
   redirect(`/admin/restaurants/${id}`);
+}
+
+export async function reorderRestaurants(ids: string[]) {
+  await requireSession();
+  const existing = await prisma.restaurant.findMany({ select: { id: true } });
+  const allowed = new Set(existing.map((item) => item.id));
+  if (!ids.length || ids.length !== existing.length || ids.some((id) => !allowed.has(id))) {
+    throw new Error("Danh sách nhà hàng không hợp lệ");
+  }
+
+  await prisma.$transaction(
+    ids.map((id, index) => prisma.restaurant.update({ where: { id }, data: { sortOrder: index } })),
+  );
+  revalidatePublicAndAdmin();
 }
 
 export async function deleteRestaurant(form: FormData) {

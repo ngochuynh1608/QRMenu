@@ -21,6 +21,7 @@ model Restaurant {
   isActive     Boolean                  @default(true)
   venueType    String                   @default("qsr")
   defaultLang  String                   @default("vi")
+  sortOrder    Int                      @default(0)
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
   categories   Category[]
