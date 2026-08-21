@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { LocaleTabs } from "@/components/LocaleTabs";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { deleteRestaurant, saveRestaurant } from "@/app/admin/actions";
 
 type Restaurant = {
@@ -26,8 +28,10 @@ type Props = {
 
 export function RestaurantForm({ restaurant, languages }: Props) {
   const locales = languages.map((item) => item.code).join(",");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
+    <>
     <form action={saveRestaurant} className="space-y-5">
       {restaurant ? <input type="hidden" name="id" value={restaurant.id} /> : null}
       <input type="hidden" name="locales" value={locales} />
@@ -159,8 +163,8 @@ export function RestaurantForm({ restaurant, languages }: Props) {
         </button>
         {restaurant ? (
           <button
-            type="submit"
-            formAction={deleteRestaurant}
+            type="button"
+            onClick={() => setConfirmDelete(true)}
             className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border-2 border-primary px-4 font-semibold text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
           >
             Xóa nhà hàng
@@ -168,5 +172,16 @@ export function RestaurantForm({ restaurant, languages }: Props) {
         ) : null}
       </div>
     </form>
+    {restaurant ? (
+      <ConfirmDeleteDialog
+        open={confirmDelete}
+        title="Xóa nhà hàng"
+        description="Menu, món và mã QR của nhà hàng này sẽ bị xóa."
+        onClose={() => setConfirmDelete(false)}
+        action={deleteRestaurant}
+        hiddenFields={{ id: restaurant.id }}
+      />
+    ) : null}
+    </>
   );
 }

@@ -6,7 +6,7 @@ import {
   getSiteSettings,
   resolveLocale,
 } from "@/lib/data";
-import { getUiMessages } from "@/lib/i18n";
+import { getUiMessages, parseUiMessages } from "@/lib/i18n";
 import { getBaseUrl, pickTranslation } from "@/lib/utils";
 import { KioskRestaurantCard } from "@/components/KioskRestaurantCard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -29,7 +29,10 @@ export default async function HomePage({
     languages[0]?.code || "vi",
     languages.map((item) => item.code),
   );
-  const ui = getUiMessages(locale);
+  const ui = getUiMessages(
+    locale,
+    parseUiMessages(languages.find((item) => item.code === locale)?.uiMessages),
+  );
   const baseUrl = await getBaseUrl();
 
   return (

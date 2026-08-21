@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { LocaleTabs } from "@/components/LocaleTabs";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import {
   deleteCategory,
   deleteItem,
@@ -43,6 +44,11 @@ function tName(items: { locale: string; name: string }[], fallback: string) {
 export function MenuEditor({ restaurantId, categories, languages, defaultLang }: Props) {
   const [categoryModal, setCategoryModal] = useState<Category | "new" | null>(null);
   const [itemModal, setItemModal] = useState<{ categoryId: string; item?: Item } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { type: "category"; id: string; name: string }
+    | { type: "item"; id: string; name: string }
+    | null
+  >(null);
 
   return (
     <div className="space-y-4">
@@ -95,17 +101,20 @@ export function MenuEditor({ restaurantId, categories, languages, defaultLang }:
             >
               <Pencil className="h-4 w-4" />
             </button>
-            <form action={deleteCategory}>
-              <input type="hidden" name="id" value={category.id} />
-              <input type="hidden" name="restaurantId" value={restaurantId} />
-              <button
-                type="submit"
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors duration-200 hover:bg-background"
-                aria-label="Xóa danh mục"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() =>
+                setPendingDelete({
+                  type: "category",
+                  id: category.id,
+                  name: tName(category.translations, defaultLang),
+                })
+              }
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors duration-200 hover:bg-background"
+              aria-label="Xóa danh mục"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
 
           <ul className="mt-3 space-y-2">
@@ -160,17 +169,20 @@ export function MenuEditor({ restaurantId, categories, languages, defaultLang }:
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
-                <form action={deleteItem}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="restaurantId" value={restaurantId} />
-                  <button
-                    type="submit"
-                    className="flex h-11 w-11 cursor-pointer items-center justify-center text-primary"
-                    aria-label="Xóa món"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPendingDelete({
+                      type: "item",
+                      id: item.id,
+                      name: tName(item.translations, defaultLang),
+                    })
+                  }
+                  className="flex h-11 w-11 cursor-pointer items-center justify-center text-primary"
+                  aria-label="Xóa món"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </li>
             ))}
           </ul>
@@ -308,6 +320,20 @@ export function MenuEditor({ restaurantId, categories, languages, defaultLang }:
             </button>
           </form>
         </Modal>
+      ) : null}
+      {pendingDelete ? (
+        <ConfirmDeleteDialog
+          open
+          title={pendingDelete.type === "category" ? "Xóa danh mục" : "Xóa món"}
+          description={
+            pendingDelete.type === "category"
+              ? `Danh mục “${pendingDelete.name}” và toàn bộ món bên trong sẽ bị xóa.`
+              : `Món “${pendingDelete.name}” sẽ bị xóa.`
+          }
+          onClose={() => setPendingDelete(null)}
+          action={pendingDelete.type === "category" ? deleteCategory : deleteItem}
+          hiddenFields={{ id: pendingDelete.id, restaurantId }}
+        />
       ) : null}
     </div>
   );

@@ -134,6 +134,23 @@ export const UI_MESSAGES: Record<string, UiMessages> = {
   },
 };
 
-export function getUiMessages(locale: string): UiMessages {
-  return UI_MESSAGES[locale] || UI_MESSAGES.en;
+export const UI_MESSAGE_KEYS = Object.keys(UI_MESSAGES.en) as (keyof UiMessages)[];
+
+export function parseUiMessages(value: unknown): Partial<UiMessages> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const out: Partial<UiMessages> = {};
+  for (const key of UI_MESSAGE_KEYS) {
+    const item = record[key];
+    if (typeof item === "string" && item.trim()) out[key] = item.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+export function getUiMessages(locale: string, extra?: Partial<UiMessages> | null): UiMessages {
+  return {
+    ...UI_MESSAGES.en,
+    ...(UI_MESSAGES[locale] ?? {}),
+    ...(extra ?? {}),
+  };
 }

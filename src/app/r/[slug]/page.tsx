@@ -7,7 +7,7 @@ import {
   getSiteSettings,
   resolveLocale,
 } from "@/lib/data";
-import { getUiMessages } from "@/lib/i18n";
+import { getUiMessages, parseUiMessages } from "@/lib/i18n";
 import { pickTranslation } from "@/lib/utils";
 
 type Props = {
@@ -64,7 +64,10 @@ export default async function RestaurantMenuPage({ params, searchParams }: Props
         code: item.code,
         nativeName: item.nativeName,
       }))}
-      ui={getUiMessages(locale)}
+      ui={getUiMessages(
+        locale,
+        parseUiMessages(languages.find((item) => item.code === locale)?.uiMessages),
+      )}
       brandStyle={brandStyleVars(settings)}
       homeHref={`/?lang=${locale}`}
     />

@@ -88,6 +88,7 @@ model Language {
   nativeName String
   isEnabled  Boolean @default(true)
   sortOrder  Int     @default(0)
+  uiMessages Json?
 }
 
 model AdminUser {

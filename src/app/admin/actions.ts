@@ -10,6 +10,10 @@ function formString(form: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function confirmedDelete(form: FormData) {
+  return formString(form, "confirm") === "delete";
+}
+
 function parseTranslations(form: FormData, prefix: string, locales: string[]) {
   return locales
     .map((locale) => ({
@@ -139,6 +143,7 @@ export async function reorderRestaurants(ids: string[]) {
 
 export async function deleteRestaurant(form: FormData) {
   await requireSession();
+  if (!confirmedDelete(form)) return;
   const id = formString(form, "id");
   await prisma.restaurant.delete({ where: { id } });
   revalidatePublicAndAdmin();
@@ -185,6 +190,7 @@ export async function saveCategory(form: FormData) {
 
 export async function deleteCategory(form: FormData) {
   await requireSession();
+  if (!confirmedDelete(form)) return;
   const id = formString(form, "id");
   const restaurantId = formString(form, "restaurantId");
   await prisma.category.delete({ where: { id } });
@@ -257,6 +263,7 @@ export async function saveItem(form: FormData) {
 
 export async function deleteItem(form: FormData) {
   await requireSession();
+  if (!confirmedDelete(form)) return;
   const id = formString(form, "id");
   const restaurantId = formString(form, "restaurantId");
   await prisma.menuItem.delete({ where: { id } });
@@ -304,6 +311,9 @@ export async function addLanguage(form: FormData) {
   const code = formString(form, "code").toLowerCase();
   const name = formString(form, "name");
   const nativeName = formString(form, "nativeName");
+  if (!/^[a-z]{2}(?:-[a-z0-9]+)?$/.test(code) || !name || !nativeName) {
+    redirect("/admin/languages?error=invalid");
+  }
   const last = await prisma.language.findFirst({ orderBy: { sortOrder: "desc" } });
   await prisma.language.create({
     data: {
@@ -315,6 +325,47 @@ export async function addLanguage(form: FormData) {
     },
   });
   revalidatePath("/admin/languages");
+  revalidatePath("/");
+}
+
+export async function updateLanguage(form: FormData) {
+  await requireSession();
+  const code = formString(form, "code").toLowerCase();
+  const name = formString(form, "name");
+  const nativeName = formString(form, "nativeName");
+  if (!code || !name || !nativeName) return;
+  await prisma.language.update({
+    where: { code },
+    data: { name, nativeName },
+  });
+  revalidatePath("/admin/languages");
+  revalidatePath("/");
+}
+
+export async function deleteLanguage(form: FormData) {
+  await requireSession();
+  if (!confirmedDelete(form)) return;
+  const code = formString(form, "code").toLowerCase();
+  const remaining = await prisma.language.count();
+  if (!code || remaining <= 1) return;
+
+  const fallback = await prisma.language.findFirst({
+    where: { code: { not: code } },
+    orderBy: { sortOrder: "asc" },
+  });
+  await prisma.$transaction([
+    prisma.restaurantTranslation.deleteMany({ where: { locale: code } }),
+    prisma.categoryTranslation.deleteMany({ where: { locale: code } }),
+    prisma.menuItemTranslation.deleteMany({ where: { locale: code } }),
+    prisma.restaurant.updateMany({
+      where: { defaultLang: code },
+      data: { defaultLang: fallback?.code || "vi" },
+    }),
+    prisma.language.delete({ where: { code } }),
+  ]);
+  revalidatePath("/admin/languages");
+  revalidatePath("/");
+  revalidatePath("/admin", "layout");
 }
 
 export async function saveSiteSettings(form: FormData) {
@@ -408,6 +459,7 @@ export async function addAdSlide(form: FormData) {
 
 export async function deleteAdSlide(form: FormData) {
   await requireSession();
+  if (!confirmedDelete(form)) return;
   const id = formString(form, "id");
   await prisma.adSlide.delete({ where: { id } });
   revalidatePath("/");

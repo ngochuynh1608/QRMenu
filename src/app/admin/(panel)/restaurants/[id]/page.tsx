@@ -5,7 +5,7 @@ import { getAllLanguages } from "@/lib/data";
 import { RestaurantForm } from "@/components/admin/RestaurantForm";
 import { getBaseUrl, pickTranslation } from "@/lib/utils";
 import { RestaurantQrCard } from "@/components/RestaurantQrCard";
-import { getUiMessages } from "@/lib/i18n";
+import { getUiMessages, parseUiMessages } from "@/lib/i18n";
 
 export default async function EditRestaurantPage({
   params,
@@ -23,7 +23,10 @@ export default async function EditRestaurantPage({
     pickTranslation(restaurant.translations, restaurant.defaultLang, "vi")?.name ||
     restaurant.slug;
   const baseUrl = await getBaseUrl();
-  const ui = getUiMessages(restaurant.defaultLang);
+  const ui = getUiMessages(
+    restaurant.defaultLang,
+    parseUiMessages(languages.find((item) => item.code === restaurant.defaultLang)?.uiMessages),
+  );
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

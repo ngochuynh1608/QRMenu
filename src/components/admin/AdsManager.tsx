@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { addAdSlide, deleteAdSlide, moveAdSlide, toggleAdSlide } from "@/app/admin/actions";
 
 type Slide = {
@@ -12,6 +14,8 @@ type Slide = {
 };
 
 export function AdsManager({ slides }: { slides: Slide[] }) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
   return (
     <div className="space-y-6">
       <form action={addAdSlide} className="space-y-4 rounded-2xl bg-surface p-5 shadow-[var(--shadow-card)]">
@@ -88,20 +92,26 @@ export function AdsManager({ slides }: { slides: Slide[] }) {
                   {slide.isActive ? "Bật" : "Tắt"}
                 </button>
               </form>
-              <form action={deleteAdSlide}>
-                <input type="hidden" name="id" value={slide.id} />
-                <button
-                  type="submit"
-                  className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-primary hover:bg-background"
-                  aria-label="Xóa"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </form>
+              <button
+                type="button"
+                onClick={() => setPendingId(slide.id)}
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-primary hover:bg-background"
+                aria-label="Xóa"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </li>
           ))
         )}
       </ul>
+      <ConfirmDeleteDialog
+        open={Boolean(pendingId)}
+        title="Xóa ảnh quảng cáo"
+        description="Ảnh này sẽ bị gỡ khỏi slideshow."
+        onClose={() => setPendingId(null)}
+        action={deleteAdSlide}
+        hiddenFields={pendingId ? { id: pendingId } : undefined}
+      />
     </div>
   );
 }
