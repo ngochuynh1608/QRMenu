@@ -52,6 +52,31 @@ body {
   display: none;
 }
 
+.img-shimmer {
+  background-color: var(--color-border);
+  overflow: hidden;
+}
+
+.img-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.55) 50%,
+    transparent 100%
+  );
+  animation: img-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes img-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .print-only {
   display: none;
 }

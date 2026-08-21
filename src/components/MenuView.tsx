@@ -13,6 +13,7 @@ import {
 import { formatPrice } from "@/lib/utils";
 import type { UiMessages } from "@/lib/i18n";
 import type { CSSProperties } from "react";
+import { MediaImage } from "@/components/MediaImage";
 
 type Translation = { locale: string; name: string; description?: string | null };
 
@@ -130,12 +131,9 @@ export function MenuView({
             <ArrowLeft className="h-5 w-5" />
           </Link>
           {restaurant.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={restaurant.logoUrl}
-              alt=""
-              className="h-10 w-10 shrink-0 rounded-full object-cover"
-            />
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-border">
+              <MediaImage src={restaurant.logoUrl} sizes="40px" className="rounded-full" priority />
+            </div>
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-heading text-lg text-white">
               {name.slice(0, 1)}
@@ -163,13 +161,8 @@ export function MenuView({
       </header>
 
       {restaurant.coverUrl ? (
-        <div className="relative aspect-[16/7] w-full bg-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={restaurant.coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+        <div className="relative aspect-[16/7] w-full overflow-hidden bg-border">
+          <MediaImage src={restaurant.coverUrl} sizes="(max-width: 512px) 100vw, 512px" priority />
         </div>
       ) : null}
 
@@ -244,9 +237,10 @@ export function MenuView({
               {tName(category.translations, locale, fallback)}
             </h2>
             <ul className="space-y-3">
-              {category.items.map((item) => {
+              {category.items.map((item, itemIndex) => {
                 const itemName = tName(item.translations, locale, fallback);
                 const itemDesc = tDesc(item.translations, locale, fallback);
+                const eager = category.id === categories[0]?.id && itemIndex < 4;
                 return (
                   <li key={item.id}>
                     <button
@@ -256,17 +250,15 @@ export function MenuView({
                     >
                       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-border">
                         {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <MediaImage
                             src={item.imageUrl}
-                            alt=""
-                            className={`h-full w-full object-cover ${item.isAvailable ? "" : "opacity-50"}`}
+                            sizes="96px"
+                            className={item.isAvailable ? "" : "opacity-50"}
+                            priority={eager}
                           />
-                        ) : (
-                          <div className="h-full w-full bg-border" />
-                        )}
+                        ) : null}
                         {!item.isAvailable ? (
-                          <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-semibold text-white">
+                          <span className="absolute inset-0 z-[1] flex items-center justify-center bg-black/45 text-xs font-semibold text-white">
                             {ui.soldOut}
                           </span>
                         ) : null}
@@ -312,14 +304,9 @@ export function MenuView({
             aria-modal="true"
             className="relative z-10 max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-surface pb-[env(safe-area-inset-bottom)] shadow-[var(--shadow-lift)]"
           >
-            <div className="relative aspect-[16/10] bg-border">
+            <div className="relative aspect-[16/10] overflow-hidden bg-border">
               {selected.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={selected.imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+                <MediaImage src={selected.imageUrl} sizes="(max-width: 512px) 100vw, 512px" />
               ) : null}
               {!selected.isAvailable ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-semibold text-white">
