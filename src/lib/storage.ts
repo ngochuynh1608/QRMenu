@@ -52,7 +52,9 @@ export async function uploadImage(file: File) {
     compressed = { buffer: raw, ext: ".jpg", type: file.type || "image/jpeg" };
   }
   const key = uploadKey(compressed.ext);
-  const body = new Uint8Array(compressed.buffer);
+  const body = new File([new Uint8Array(compressed.buffer)], path.basename(key), {
+    type: compressed.type,
+  });
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     const blob = await put(key, body, {
