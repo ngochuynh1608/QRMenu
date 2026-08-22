@@ -29,6 +29,8 @@ const FALLBACK_SETTINGS: SiteSettings = {
   adsEnabled: false,
   adsIdleSeconds: 10,
   adsSlideSeconds: 8,
+  displayLang: "vi",
+  translateLang: "vi",
 };
 
 export async function getEnabledLanguages() {

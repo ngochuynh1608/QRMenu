@@ -9,7 +9,11 @@ function getSecret() {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (!pathname.startsWith("/admin") || pathname.startsWith("/admin/login")) {
+  if (
+    !pathname.startsWith("/admin") ||
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/forgot")
+  ) {
     return NextResponse.next();
   }
 

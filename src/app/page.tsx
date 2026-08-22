@@ -26,7 +26,7 @@ export default async function HomePage({
   ]);
   const locale = resolveLocale(
     lang,
-    languages[0]?.code || "vi",
+    settings.displayLang,
     languages.map((item) => item.code),
   );
   const ui = getUiMessages(

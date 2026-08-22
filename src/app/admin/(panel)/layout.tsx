@@ -9,29 +9,39 @@ import {
   QrCode,
   Settings,
   Store,
+  Users,
 } from "lucide-react";
 import { logoutAction } from "../actions";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation } from "@/lib/utils";
 import { ImportNavButton } from "@/components/admin/ImportNavButton";
+import { getSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
-const NAV = [
-  { href: "/admin", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/admin/restaurants", label: "Nhà hàng", icon: Store },
-  { href: "/admin/qr", label: "Cập nhật QR", icon: QrCode },
-  { href: "/admin/languages", label: "Ngôn ngữ", icon: Globe },
-  { href: "/admin/ads", label: "Quảng cáo", icon: Megaphone },
-  { href: "/admin/settings", label: "Thiết lập", icon: Settings },
-  { href: "/admin/account", label: "Tài khoản", icon: CircleUser },
+const ALL_NAV = [
+  { href: "/admin", label: "Tổng quan", icon: LayoutDashboard, adminOnly: false },
+  { href: "/admin/restaurants", label: "Nhà hàng", icon: Store, adminOnly: false },
+  { href: "/admin/qr", label: "Cập nhật QR", icon: QrCode, adminOnly: true },
+  { href: "/admin/languages", label: "Ngôn ngữ", icon: Globe, adminOnly: true },
+  { href: "/admin/ads", label: "Quảng cáo", icon: Megaphone, adminOnly: false },
+  { href: "/admin/settings", label: "Thiết lập", icon: Settings, adminOnly: true },
+  { href: "/admin/users", label: "Người dùng", icon: Users, adminOnly: true },
+  { href: "/admin/account", label: "Tài khoản", icon: CircleUser, adminOnly: false },
 ];
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
-  const restaurants = await prisma.restaurant.findMany({
-    include: { translations: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  const session = await getSession();
+  const admin = session ? isAdmin(session) : false;
+  const nav = ALL_NAV.filter((item) => admin || !item.adminOnly);
+
+  const restaurants = admin
+    ? await prisma.restaurant.findMany({
+        include: { translations: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      })
+    : [];
 
   return (
     <div className="min-h-dvh bg-background">
@@ -54,7 +64,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
           </form>
         </div>
         <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 scrollbar-hide">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -64,15 +74,17 @@ export default async function AdminPanelLayout({ children }: { children: React.R
               {item.label}
             </Link>
           ))}
-          <ImportNavButton
-            restaurants={restaurants.map((restaurant) => ({
-              id: restaurant.id,
-              slug: restaurant.slug,
-              name:
-                pickTranslation(restaurant.translations, restaurant.defaultLang, "vi")?.name ||
-                restaurant.slug,
-            }))}
-          />
+          {admin ? (
+            <ImportNavButton
+              restaurants={restaurants.map((restaurant) => ({
+                id: restaurant.id,
+                slug: restaurant.slug,
+                name:
+                  pickTranslation(restaurant.translations, restaurant.defaultLang, "vi")?.name ||
+                  restaurant.slug,
+              }))}
+            />
+          ) : null}
           <Link
             href="/"
             className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:text-primary"

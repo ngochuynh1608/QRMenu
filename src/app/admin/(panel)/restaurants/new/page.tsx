@@ -1,7 +1,9 @@
 import { getAllLanguages } from "@/lib/data";
 import { RestaurantForm } from "@/components/admin/RestaurantForm";
+import { requireAdminPage } from "@/lib/auth";
 
 export default async function NewRestaurantPage() {
+  await requireAdminPage();
   const languages = await getAllLanguages();
 
   return (

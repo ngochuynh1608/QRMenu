@@ -1,12 +1,13 @@
+import Link from "next/link";
 import { ChefHat } from "lucide-react";
 import { loginAction } from "../actions";
 
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; reset?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, reset } = await searchParams;
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4">
@@ -20,21 +21,27 @@ export default async function AdminLoginPage({
             <p className="text-sm text-muted">Quản lý nhà hàng, menu và ngôn ngữ</p>
           </div>
         </div>
+        {reset ? (
+          <p className="mb-4 rounded-lg bg-cta/10 px-3 py-2 text-sm text-cta-dark">
+            Đã đặt lại mật khẩu. Đăng nhập bằng mật khẩu mới.
+          </p>
+        ) : null}
         {error ? (
           <p className="mb-4 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-            Email hoặc mật khẩu không đúng.
+            Tài khoản hoặc mật khẩu không đúng.
           </p>
         ) : null}
         <form action={loginAction} className="space-y-4">
           <label className="block text-sm font-medium">
-            Email
+            Tài khoản
             <input
-              name="email"
-              type="email"
+              name="account"
+              type="text"
               required
               autoComplete="username"
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
+            <span className="mt-1 block text-xs text-muted">Tên đăng nhập hoặc email.</span>
           </label>
           <label className="block text-sm font-medium">
             Mật khẩu
@@ -53,6 +60,11 @@ export default async function AdminLoginPage({
             Đăng nhập
           </button>
         </form>
+        <p className="mt-4 text-center text-sm">
+          <Link href="/admin/forgot" className="font-medium text-primary hover:underline">
+            Quên mật khẩu?
+          </Link>
+        </p>
       </div>
     </main>
   );

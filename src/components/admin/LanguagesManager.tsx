@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Languages, LoaderCircle, Pencil, Trash2 } from "lucide-react";
-import { deleteLanguage, toggleLanguage, updateLanguage } from "@/app/admin/actions";
+import { deleteLanguage, saveLanguageDefaults, toggleLanguage, updateLanguage } from "@/app/admin/actions";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 
 type LanguageRow = {
@@ -13,7 +13,15 @@ type LanguageRow = {
   isEnabled: boolean;
 };
 
-export function LanguagesManager({ languages }: { languages: LanguageRow[] }) {
+export function LanguagesManager({
+  languages,
+  displayLang,
+  translateLang,
+}: {
+  languages: LanguageRow[];
+  displayLang: string;
+  translateLang: string;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LanguageRow | null>(null);
@@ -54,8 +62,52 @@ export function LanguagesManager({ languages }: { languages: LanguageRow[] }) {
     }
   }
 
+  const displayOptions = languages.filter((item) => item.isEnabled);
+  const selectClass =
+    "mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none";
+
   return (
     <div className="space-y-3">
+      <form
+        action={saveLanguageDefaults}
+        className="space-y-3 rounded-2xl bg-surface p-5 shadow-[var(--shadow-card)]"
+      >
+        <h2 className="font-heading text-xl">Mặc định</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-medium">
+            Ngôn ngữ mặc định hiển thị
+            <select name="displayLang" defaultValue={displayLang} className={selectClass}>
+              {(displayOptions.length ? displayOptions : languages).map((language) => (
+                <option key={language.code} value={language.code}>
+                  {language.nativeName} ({language.code})
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Locale khách thấy trước khi chọn ngôn ngữ khác.
+            </span>
+          </label>
+          <label className="text-sm font-medium">
+            Ngôn ngữ dịch mặc định
+            <select name="translateLang" defaultValue={translateLang} className={selectClass}>
+              {languages.map((language) => (
+                <option key={language.code} value={language.code}>
+                  {language.nativeName} ({language.code})
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Tự động dịch lấy bản này làm nguồn (ví dụ tiếng Việt → Nga).
+            </span>
+          </label>
+        </div>
+        <button
+          type="submit"
+          className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-cta px-4 font-semibold text-white transition-colors duration-200 hover:bg-cta-dark"
+        >
+          Lưu mặc định
+        </button>
+      </form>
       {message ? <p className="rounded-xl bg-surface px-4 py-3 text-sm text-muted">{message}</p> : null}
       {error ? <p className="rounded-xl bg-surface px-4 py-3 text-sm text-primary">{error}</p> : null}
       <ul className="space-y-2">
@@ -120,6 +172,18 @@ export function LanguagesManager({ languages }: { languages: LanguageRow[] }) {
                       <span className="text-sm font-normal text-muted">({language.code})</span>
                     </p>
                     <p className="text-sm text-muted">{language.name}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {language.code === displayLang ? (
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                          Hiển thị mặc định
+                        </span>
+                      ) : null}
+                      {language.code === translateLang ? (
+                        <span className="rounded-full bg-cta px-2 py-0.5 text-xs font-semibold text-white">
+                          Nguồn dịch
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -132,9 +196,14 @@ export function LanguagesManager({ languages }: { languages: LanguageRow[] }) {
                     </button>
                     <button
                       type="button"
-                      disabled={busy !== null}
+                      disabled={busy !== null || language.code === translateLang}
+                      title={
+                        language.code === translateLang
+                          ? "Đây là ngôn ngữ nguồn. Bấm Tự động dịch trên locale đích (ví dụ ru)."
+                          : undefined
+                      }
                       onClick={() => autoTranslate(language.code)}
-                      className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 border-primary px-3 text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary hover:text-white disabled:opacity-50"
+                      className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 border-primary px-3 text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {busy === language.code ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />

@@ -4,6 +4,9 @@ const GOOGLE_LANG: Record<string, string> = {
   "zh-tw": "zh-TW",
   "pt-br": "pt",
   he: "iw",
+  rus: "ru",
+  russian: "ru",
+  russia: "ru",
 };
 
 export function toGoogleLang(code: string) {
@@ -60,6 +63,10 @@ async function translateOfficial(texts: string[], from: string, to: string) {
     throw new Error(data.error?.message || `Google Dịch lỗi (${res.status})`);
   }
   return data.data.translations.map((item) => decodeHtml(item.translatedText || ""));
+}
+
+function sameText(a: string, b: string) {
+  return a.trim().localeCompare(b.trim(), undefined, { sensitivity: "accent" }) === 0;
 }
 
 async function translateGtx(text: string, from: string, to: string) {
@@ -122,8 +129,12 @@ export async function translateTexts(texts: string[], from: string, to: string) 
     }
   } else {
     await mapPool(unique, 4, async (text, i) => {
-      translated[i] = await translateGtx(text, source, target);
-      return translated[i];
+      let result = await translateGtx(text, source, target);
+      if (sameText(result, text)) {
+        result = await translateGtx(text, "auto", target);
+      }
+      translated[i] = result;
+      return result;
     });
   }
 
@@ -131,6 +142,7 @@ export async function translateTexts(texts: string[], from: string, to: string) 
     const value = text.trim();
     if (!value) return text;
     const slot = index.get(value);
-    return slot === undefined ? text : translated[slot] || text;
+    const out = slot === undefined ? "" : translated[slot];
+    return out?.trim() ? out : text;
   });
 }

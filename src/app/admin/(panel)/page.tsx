@@ -1,25 +1,43 @@
 import Link from "next/link";
-import { Globe, Store, UtensilsCrossed } from "lucide-react";
+import { Globe, Megaphone, Store, UtensilsCrossed } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
+import { redirect } from "next/navigation";
 
 export default async function AdminHomePage() {
-  const [restaurants, items, languages] = await Promise.all([
+  const session = await getSession();
+  if (!session) redirect("/admin/login");
+  const admin = isAdmin(session);
+
+  const [restaurants, items, languages, ads] = await Promise.all([
     prisma.restaurant.count(),
     prisma.menuItem.count(),
     prisma.language.count({ where: { isEnabled: true } }),
+    prisma.adSlide.count(),
   ]);
 
-  const stats = [
-    { label: "Nhà hàng", value: restaurants, href: "/admin/restaurants", icon: Store },
-    { label: "Món ăn", value: items, href: "/admin/restaurants", icon: UtensilsCrossed },
-    { label: "Ngôn ngữ đang bật", value: languages, href: "/admin/languages", icon: Globe },
-  ];
+  const stats = admin
+    ? [
+        { label: "Nhà hàng", value: restaurants, href: "/admin/restaurants", icon: Store },
+        { label: "Món ăn", value: items, href: "/admin/restaurants", icon: UtensilsCrossed },
+        { label: "Ngôn ngữ đang bật", value: languages, href: "/admin/languages", icon: Globe },
+      ]
+    : [
+        { label: "Nhà hàng", value: restaurants, href: "/admin/restaurants", icon: Store },
+        { label: "Món ăn", value: items, href: "/admin/restaurants", icon: UtensilsCrossed },
+        { label: "Quảng cáo", value: ads, href: "/admin/ads", icon: Megaphone },
+      ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-3xl">Tổng quan</h1>
-        <p className="mt-1 text-muted">Quản lý nội dung menu và mã QR nhà hàng.</p>
+        <p className="mt-1 text-muted">
+          {admin
+            ? "Quản lý nội dung menu và mã QR nhà hàng."
+            : "Quản lý menu và quảng cáo."}
+        </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((stat) => (
@@ -34,12 +52,14 @@ export default async function AdminHomePage() {
           </Link>
         ))}
       </div>
-      <Link
-        href="/admin/restaurants/new"
-        className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-cta px-4 font-semibold text-white transition-colors duration-200 hover:bg-cta-dark"
-      >
-        Thêm nhà hàng
-      </Link>
+      {admin ? (
+        <Link
+          href="/admin/restaurants/new"
+          className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-cta px-4 font-semibold text-white transition-colors duration-200 hover:bg-cta-dark"
+        >
+          Thêm nhà hàng
+        </Link>
+      ) : null}
     </div>
   );
 }

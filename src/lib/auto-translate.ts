@@ -13,14 +13,30 @@ function pickSource(rows: TranslationRow[], preferred: string[]) {
   return rows.find((item) => item.name.trim());
 }
 
-function empty(value?: string | null) {
-  return !value?.trim();
+function sameText(a: string, b: string) {
+  return a.trim().localeCompare(b.trim(), undefined, { sensitivity: "accent" }) === 0;
+}
+
+function needsTranslate(current: string | null | undefined, source: string) {
+  if (!source.trim()) return false;
+  if (!current?.trim()) return true;
+  return sameText(current, source);
 }
 
 export async function autoTranslateLocale(target: string) {
   const locale = target.trim().toLowerCase();
   const language = await prisma.language.findUnique({ where: { code: locale } });
   if (!language) throw new Error("Không tìm thấy ngôn ngữ.");
+
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  const translateLang = settings?.translateLang?.trim().toLowerCase() || "vi";
+  const sourceOrder = [translateLang, "vi", "en"].filter(
+    (code, index, list) =>
+      Boolean(code) && code !== locale && list.indexOf(code) === index,
+  );
+  if (!sourceOrder.length) {
+    throw new Error("Ngôn ngữ dịch mặc định trùng ngôn ngữ đích. Chọn nguồn khác (ví dụ tiếng Việt).");
+  }
 
   const restaurants = await prisma.restaurant.findMany({
     include: {
@@ -44,7 +60,7 @@ export async function autoTranslateLocale(target: string) {
   const itemUpdates: Array<{ id: string; name?: string; description?: string | null }> = [];
 
   for (const restaurant of restaurants) {
-    const source = pickSource(restaurant.translations, [restaurant.defaultLang, "vi", "en"]);
+    const source = pickSource(restaurant.translations, sourceOrder);
     if (!source) continue;
     const current = restaurant.translations.find((item) => item.locale === locale);
     if (!current) {
@@ -68,7 +84,7 @@ export async function autoTranslateLocale(target: string) {
       }
     } else {
       const patch: { id: string; name?: string; description?: string | null } = { id: current.id };
-      if (empty(current.name) && source.name.trim()) {
+      if (needsTranslate(current.name, source.name)) {
         jobs.push({
           from: source.locale,
           text: source.name,
@@ -78,7 +94,7 @@ export async function autoTranslateLocale(target: string) {
         });
         restaurantUpdates.push(patch);
       }
-      if (empty(current.description) && source.description?.trim()) {
+      if (source.description?.trim() && needsTranslate(current.description, source.description)) {
         jobs.push({
           from: source.locale,
           text: source.description,
@@ -91,7 +107,7 @@ export async function autoTranslateLocale(target: string) {
     }
 
     for (const category of restaurant.categories) {
-      const catSource = pickSource(category.translations, [restaurant.defaultLang, "vi", "en"]);
+      const catSource = pickSource(category.translations, sourceOrder);
       if (!catSource) continue;
       const catCurrent = category.translations.find((item) => item.locale === locale);
       if (!catCurrent) {
@@ -104,7 +120,7 @@ export async function autoTranslateLocale(target: string) {
             created.name = value;
           },
         });
-      } else if (empty(catCurrent.name)) {
+      } else if (needsTranslate(catCurrent.name, catSource.name)) {
         const patch = { id: catCurrent.id, name: catSource.name };
         categoryUpdates.push(patch);
         jobs.push({
@@ -117,7 +133,7 @@ export async function autoTranslateLocale(target: string) {
       }
 
       for (const item of category.items) {
-        const itemSource = pickSource(item.translations, [restaurant.defaultLang, "vi", "en"]);
+        const itemSource = pickSource(item.translations, sourceOrder);
         if (!itemSource) continue;
         const itemCurrent = item.translations.find((row) => row.locale === locale);
         if (!itemCurrent) {
@@ -145,7 +161,7 @@ export async function autoTranslateLocale(target: string) {
           }
         } else {
           const patch: { id: string; name?: string; description?: string | null } = { id: itemCurrent.id };
-          if (empty(itemCurrent.name) && itemSource.name.trim()) {
+          if (needsTranslate(itemCurrent.name, itemSource.name) && itemSource.name.trim()) {
             jobs.push({
               from: itemSource.locale,
               text: itemSource.name,
@@ -155,7 +171,7 @@ export async function autoTranslateLocale(target: string) {
             });
             itemUpdates.push(patch);
           }
-          if (empty(itemCurrent.description) && itemSource.description?.trim()) {
+          if (itemSource.description?.trim() && needsTranslate(itemCurrent.description, itemSource.description)) {
             jobs.push({
               from: itemSource.locale,
               text: itemSource.description,
@@ -174,15 +190,16 @@ export async function autoTranslateLocale(target: string) {
     ...(UI_MESSAGES[locale] ?? {}),
     ...(parseUiMessages(language.uiMessages) ?? {}),
   } as Partial<UiMessages>;
-  const uiSource = UI_MESSAGES.vi;
+  const uiSourceLocale = UI_MESSAGES[translateLang] ? translateLang : "vi";
+  const uiSource = UI_MESSAGES[uiSourceLocale];
   const uiPatch: Partial<UiMessages> = { ...currentUi };
   let uiChanged = false;
   for (const key of UI_MESSAGE_KEYS) {
-    if (currentUi[key]?.trim()) continue;
     const sourceText = uiSource[key];
     if (!sourceText) continue;
+    if (currentUi[key]?.trim() && !sameText(currentUi[key] || "", sourceText)) continue;
     jobs.push({
-      from: "vi",
+      from: uiSourceLocale,
       text: sourceText,
       apply: (value) => {
         uiPatch[key] = value;

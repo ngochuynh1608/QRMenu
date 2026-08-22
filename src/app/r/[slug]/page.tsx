@@ -23,7 +23,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
     getSiteSettings(),
   ]);
   if (!restaurant) return { title: settings.siteName };
-  const locale = lang || restaurant.defaultLang;
+  const locale = lang || settings.displayLang || restaurant.defaultLang;
   const name = pickTranslation(restaurant.translations, locale, restaurant.defaultLang)?.name;
   return { title: name ? `${name} · ${settings.siteName}` : settings.siteName };
 }
@@ -41,7 +41,7 @@ export default async function RestaurantMenuPage({ params, searchParams }: Props
 
   const locale = resolveLocale(
     lang,
-    restaurant.defaultLang,
+    settings.displayLang,
     languages.map((item) => item.code),
   );
 

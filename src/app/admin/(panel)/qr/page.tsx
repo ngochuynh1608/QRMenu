@@ -1,12 +1,14 @@
 import { getPublicRestaurants, getSiteSettings } from "@/lib/data";
 import { getBaseUrl, pickTranslation } from "@/lib/utils";
 import { QrUpdatePanel } from "@/components/admin/QrUpdatePanel";
+import { requireAdminPage } from "@/lib/auth";
 
 export default async function QrAdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ updated?: string }>;
 }) {
+  await requireAdminPage();
   const { updated } = await searchParams;
   const [settings, restaurants, baseUrl] = await Promise.all([
     getSiteSettings(),

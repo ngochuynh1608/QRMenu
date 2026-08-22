@@ -93,8 +93,10 @@ model Language {
 
 model AdminUser {
   id           String @id @default(cuid())
+  username     String @unique
   email        String @unique
   passwordHash String
+  role         String @default("admin")
 }
 
 model SiteSettings {
@@ -111,6 +113,8 @@ model SiteSettings {
   adsEnabled         Boolean @default(false)
   adsIdleSeconds     Int     @default(10)
   adsSlideSeconds    Int     @default(8)
+  displayLang        String  @default("vi")
+  translateLang      String  @default("vi")
 }
 
 model AdSlide {

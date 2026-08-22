@@ -508,8 +508,10 @@ async function main() {
 
   await prisma.adminUser.create({
     data: {
+      username: "admin",
       email: "admin@qrmenu.local",
       passwordHash: bcrypt.hashSync("admin123", 10),
+      role: "admin",
     },
   });
 
@@ -535,6 +537,8 @@ async function main() {
       adsEnabled: false,
       adsIdleSeconds: 10,
       adsSlideSeconds: 8,
+      displayLang: "vi",
+      translateLang: "vi",
     },
   });
 
@@ -542,7 +546,7 @@ async function main() {
     await seedVenue(venue, index);
   }
 
-  console.log("Seeded: admin@qrmenu.local / admin123");
+  console.log("Seeded: admin / admin123 (hoặc admin@qrmenu.local)");
   console.log(`Restaurants: ${venues.map((v) => v.slug).join(", ")}`);
 }
 

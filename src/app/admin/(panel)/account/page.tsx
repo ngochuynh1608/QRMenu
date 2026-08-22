@@ -2,10 +2,12 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { updateAdminAccountAction } from "@/app/admin/actions";
+import { ROLE_CONTENT } from "@/lib/roles";
 
 const ERRORS: Record<string, string> = {
   current: "Mật khẩu hiện tại không đúng.",
   email: "Email không hợp lệ hoặc đã được sử dụng.",
+  username: "Tên tài khoản không hợp lệ hoặc đã được sử dụng (3–32 ký tự: a-z, 0-9, . _ -).",
   mismatch: "Mật khẩu mới và xác nhận không khớp.",
   short: "Mật khẩu mới phải có ít nhất 8 ký tự.",
   unchanged: "Không có thay đổi nào để lưu.",
@@ -24,12 +26,13 @@ export default async function AdminAccountPage({
 
   const { error, saved } = await searchParams;
   const errorMessage = error ? ERRORS[error] || "Không cập nhật được tài khoản." : "";
+  const roleLabel = user.role === ROLE_CONTENT ? "Quản trị nội dung" : "Quản trị viên";
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
         <h1 className="font-heading text-3xl">Tài khoản</h1>
-        <p className="mt-1 text-muted">Đổi email đăng nhập và mật khẩu admin.</p>
+        <p className="mt-1 text-muted">Đổi tên đăng nhập, email và mật khẩu.</p>
       </div>
 
       <div className="rounded-2xl bg-surface p-5 shadow-[var(--shadow-card)]">
@@ -43,13 +46,31 @@ export default async function AdminAccountPage({
         ) : null}
 
         <form action={updateAdminAccountAction} className="space-y-4">
+          <p className="rounded-lg bg-background px-3 py-2 text-sm text-muted">
+            Vai trò: <span className="font-medium text-text">{roleLabel}</span>
+          </p>
+
+          <label className="block text-sm font-medium">
+            Tên tài khoản
+            <input
+              name="username"
+              type="text"
+              required
+              minLength={3}
+              maxLength={32}
+              autoComplete="username"
+              defaultValue={user.username}
+              className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+            />
+          </label>
+
           <label className="block text-sm font-medium">
             Email
             <input
               name="email"
               type="email"
               required
-              autoComplete="username"
+              autoComplete="email"
               defaultValue={user.email}
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
@@ -65,7 +86,7 @@ export default async function AdminAccountPage({
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
             <span className="mt-1 block text-xs text-muted">
-              Bắt buộc để xác nhận khi đổi email hoặc mật khẩu.
+              Bắt buộc để xác nhận khi đổi thông tin hoặc mật khẩu.
             </span>
           </label>
 
@@ -79,7 +100,7 @@ export default async function AdminAccountPage({
               className="mt-1 min-h-[44px] w-full rounded-lg border border-border bg-white px-4 text-base text-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
             <span className="mt-1 block text-xs text-muted">
-              Để trống nếu chỉ đổi email. Tối thiểu 8 ký tự.
+              Để trống nếu chỉ đổi tên tài khoản hoặc email. Tối thiểu 8 ký tự.
             </span>
           </label>
 

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getAllLanguages } from "@/lib/data";
@@ -6,6 +6,8 @@ import { RestaurantForm } from "@/components/admin/RestaurantForm";
 import { getBaseUrl, pickTranslation } from "@/lib/utils";
 import { RestaurantQrCard } from "@/components/RestaurantQrCard";
 import { getUiMessages, parseUiMessages } from "@/lib/i18n";
+import { getSession } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 
 export default async function EditRestaurantPage({
   params,
@@ -13,6 +15,9 @@ export default async function EditRestaurantPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await getSession();
+  if (!session) redirect("/admin/login");
+  if (!isAdmin(session)) redirect(`/admin/restaurants/${id}/menu`);
   const [restaurant, languages] = await Promise.all([
     prisma.restaurant.findUnique({ where: { id }, include: { translations: true } }),
     getAllLanguages(),

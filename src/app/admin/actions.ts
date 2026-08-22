@@ -3,7 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { login, logout, requireSession, updateAdminAccount } from "@/lib/auth";
+import {
+  login,
+  logout,
+  requireAdmin,
+  requireSession,
+  resetPasswordWithBackup,
+  updateAdminAccount,
+} from "@/lib/auth";
+import {
+  isValidEmail,
+  isValidUsername,
+  normalizeUsername,
+  parseAdminRole,
+  ROLE_ADMIN,
+} from "@/lib/roles";
+import bcrypt from "bcryptjs";
 
 function formString(form: FormData, key: string) {
   const value = form.get(key);
@@ -31,13 +46,37 @@ function revalidatePublicAndAdmin(slug?: string) {
 }
 
 export async function loginAction(form: FormData) {
-  const email = formString(form, "email");
+  const account = formString(form, "account") || formString(form, "email");
   const password = formString(form, "password");
-  const ok = await login(email, password);
+  const ok = await login(account, password);
   if (!ok) {
     redirect("/admin/login?error=1");
   }
   redirect("/admin");
+}
+
+export async function forgotPasswordAction(form: FormData) {
+  const username = formString(form, "username");
+  const backupPassword = formString(form, "backupPassword");
+  const newPassword = typeof form.get("newPassword") === "string" ? String(form.get("newPassword")) : "";
+  const confirmPassword =
+    typeof form.get("confirmPassword") === "string" ? String(form.get("confirmPassword")) : "";
+
+  if (newPassword !== confirmPassword) {
+    redirect("/admin/forgot?error=mismatch");
+  }
+
+  const result = await resetPasswordWithBackup({
+    username,
+    backupPassword,
+    newPassword,
+  });
+
+  if (!result.ok) {
+    redirect(`/admin/forgot?error=${result.error}`);
+  }
+
+  redirect("/admin/login?reset=1");
 }
 
 export async function logoutAction() {
@@ -62,6 +101,7 @@ export async function updateAdminAccountAction(form: FormData) {
 
   const result = await updateAdminAccount({
     userId: session.id,
+    username: formString(form, "username"),
     email,
     currentPassword,
     newPassword,
@@ -76,7 +116,7 @@ export async function updateAdminAccountAction(form: FormData) {
 }
 
 export async function saveRestaurant(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const id = formString(form, "id");
   const slug = formString(form, "slug")
     .toLowerCase()
@@ -128,7 +168,7 @@ export async function saveRestaurant(form: FormData) {
 }
 
 export async function reorderRestaurants(ids: string[]) {
-  await requireSession();
+  await requireAdmin();
   const existing = await prisma.restaurant.findMany({ select: { id: true } });
   const allowed = new Set(existing.map((item) => item.id));
   if (!ids.length || ids.length !== existing.length || ids.some((id) => !allowed.has(id))) {
@@ -142,7 +182,7 @@ export async function reorderRestaurants(ids: string[]) {
 }
 
 export async function deleteRestaurant(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   if (!confirmedDelete(form)) return;
   const id = formString(form, "id");
   await prisma.restaurant.delete({ where: { id } });
@@ -294,7 +334,7 @@ export async function moveItem(form: FormData) {
 }
 
 export async function toggleLanguage(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const code = formString(form, "code");
   const current = await prisma.language.findUnique({ where: { code } });
   if (!current) return;
@@ -307,7 +347,7 @@ export async function toggleLanguage(form: FormData) {
 }
 
 export async function addLanguage(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const code = formString(form, "code").toLowerCase();
   const name = formString(form, "name");
   const nativeName = formString(form, "nativeName");
@@ -329,7 +369,7 @@ export async function addLanguage(form: FormData) {
 }
 
 export async function updateLanguage(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const code = formString(form, "code").toLowerCase();
   const name = formString(form, "name");
   const nativeName = formString(form, "nativeName");
@@ -342,8 +382,29 @@ export async function updateLanguage(form: FormData) {
   revalidatePath("/");
 }
 
+export async function saveLanguageDefaults(form: FormData) {
+  await requireAdmin();
+  const languages = await prisma.language.findMany({ select: { code: true, isEnabled: true } });
+  const allowed = new Set(languages.map((item) => item.code));
+  const enabled = new Set(languages.filter((item) => item.isEnabled).map((item) => item.code));
+  const displayLang = enabled.has(formString(form, "displayLang"))
+    ? formString(form, "displayLang")
+    : languages.find((item) => item.isEnabled)?.code || "vi";
+  const translateLang = allowed.has(formString(form, "translateLang"))
+    ? formString(form, "translateLang")
+    : "vi";
+  await prisma.siteSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", displayLang, translateLang },
+    update: { displayLang, translateLang },
+  });
+  revalidatePath("/admin/languages");
+  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+}
+
 export async function deleteLanguage(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   if (!confirmedDelete(form)) return;
   const code = formString(form, "code").toLowerCase();
   const remaining = await prisma.language.count();
@@ -363,13 +424,23 @@ export async function deleteLanguage(form: FormData) {
     }),
     prisma.language.delete({ where: { code } }),
   ]);
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  if (settings) {
+    await prisma.siteSettings.update({
+      where: { id: "default" },
+      data: {
+        displayLang: settings.displayLang === code ? fallback?.code || "vi" : settings.displayLang,
+        translateLang: settings.translateLang === code ? fallback?.code || "vi" : settings.translateLang,
+      },
+    });
+  }
   revalidatePath("/admin/languages");
   revalidatePath("/");
   revalidatePath("/admin", "layout");
 }
 
 export async function saveSiteSettings(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const idleRaw = Number(formString(form, "adsIdleSeconds") || "10");
   const slideRaw = Number(formString(form, "adsSlideSeconds") || "8");
   const publicBaseUrl = normalizePublicUrl(formString(form, "publicBaseUrl"));
@@ -419,7 +490,7 @@ function normalizePublicUrl(raw: string) {
 }
 
 export async function updateQrCodes(form: FormData) {
-  await requireSession();
+  await requireAdmin();
   const publicBaseUrl = normalizePublicUrl(formString(form, "publicBaseUrl"));
   const current = await prisma.siteSettings.findUnique({ where: { id: "default" } });
   await prisma.siteSettings.upsert({
@@ -495,4 +566,95 @@ export async function moveAdSlide(form: FormData) {
   ]);
   revalidatePath("/");
   revalidatePath("/admin/ads");
+}
+
+async function adminCount() {
+  return prisma.adminUser.count({ where: { role: ROLE_ADMIN } });
+}
+
+export async function createAdminUserAction(form: FormData) {
+  await requireAdmin();
+  const username = normalizeUsername(formString(form, "username"));
+  const email = formString(form, "email").toLowerCase();
+  const password = typeof form.get("password") === "string" ? String(form.get("password")) : "";
+  const role = parseAdminRole(formString(form, "role"));
+
+  if (!isValidUsername(username)) redirect("/admin/users?error=username");
+  if (!isValidEmail(email)) redirect("/admin/users?error=email");
+  if (password.length < 8) redirect("/admin/users?error=short");
+  if (!role) redirect("/admin/users?error=role");
+
+  const takenUsername = await prisma.adminUser.findUnique({ where: { username } });
+  if (takenUsername) redirect("/admin/users?error=username");
+  const takenEmail = await prisma.adminUser.findUnique({ where: { email } });
+  if (takenEmail) redirect("/admin/users?error=email");
+
+  await prisma.adminUser.create({
+    data: {
+      username,
+      email,
+      passwordHash: await bcrypt.hash(password, 10),
+      role,
+    },
+  });
+  revalidatePath("/admin/users");
+  redirect("/admin/users?created=1");
+}
+
+export async function updateAdminUserAction(form: FormData) {
+  await requireAdmin();
+  const id = formString(form, "id");
+  const username = normalizeUsername(formString(form, "username"));
+  const email = formString(form, "email").toLowerCase();
+  const password = typeof form.get("password") === "string" ? String(form.get("password")) : "";
+  const role = parseAdminRole(formString(form, "role"));
+
+  const user = await prisma.adminUser.findUnique({ where: { id } });
+  if (!user) redirect("/admin/users?error=missing");
+  if (!isValidUsername(username)) redirect("/admin/users?error=username");
+  if (!isValidEmail(email)) redirect("/admin/users?error=email");
+  if (!role) redirect("/admin/users?error=role");
+  if (password && password.length < 8) redirect("/admin/users?error=short");
+
+  if (user.role === ROLE_ADMIN && role !== ROLE_ADMIN && (await adminCount()) <= 1) {
+    redirect("/admin/users?error=lastadmin");
+  }
+
+  const takenUsername = await prisma.adminUser.findFirst({
+    where: { username, NOT: { id } },
+  });
+  if (takenUsername) redirect("/admin/users?error=username");
+  const takenEmail = await prisma.adminUser.findFirst({
+    where: { email, NOT: { id } },
+  });
+  if (takenEmail) redirect("/admin/users?error=email");
+
+  await prisma.adminUser.update({
+    where: { id },
+    data: {
+      username,
+      email,
+      role,
+      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
+    },
+  });
+  revalidatePath("/admin/users");
+  redirect("/admin/users?saved=1");
+}
+
+export async function deleteAdminUserAction(form: FormData) {
+  const session = await requireAdmin();
+  if (!confirmedDelete(form)) return;
+  const id = formString(form, "id");
+  if (id === session.id) redirect("/admin/users?error=self");
+
+  const user = await prisma.adminUser.findUnique({ where: { id } });
+  if (!user) return;
+  if (user.role === ROLE_ADMIN && (await adminCount()) <= 1) {
+    redirect("/admin/users?error=lastadmin");
+  }
+
+  await prisma.adminUser.delete({ where: { id } });
+  revalidatePath("/admin/users");
+  redirect("/admin/users?deleted=1");
 }

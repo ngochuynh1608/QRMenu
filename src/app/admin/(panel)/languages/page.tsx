@@ -1,20 +1,24 @@
 import { addLanguage } from "@/app/admin/actions";
-import { getAllLanguages } from "@/lib/data";
+import { getAllLanguages, getSiteSettings } from "@/lib/data";
 import { LanguagesManager } from "@/components/admin/LanguagesManager";
+import { requireAdminPage } from "@/lib/auth";
 
 export default async function LanguagesPage() {
-  const languages = await getAllLanguages();
+  await requireAdminPage();
+  const [languages, settings] = await Promise.all([getAllLanguages(), getSiteSettings()]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="font-heading text-3xl">Ngôn ngữ</h1>
         <p className="mt-1 text-muted">
-          Sửa tên locale, bật/tắt trên menu khách, và dịch các text còn thiếu bằng Google Dịch.
+          Chọn ngôn ngữ hiển thị mặc định và ngôn ngữ nguồn khi bấm Tự động dịch.
         </p>
       </div>
 
       <LanguagesManager
+        displayLang={settings.displayLang}
+        translateLang={settings.translateLang}
         languages={languages.map((language) => ({
           code: language.code,
           name: language.name,

@@ -15,7 +15,13 @@ export type RestaurantListItem = {
   itemCount: number;
 };
 
-export function RestaurantList({ restaurants }: { restaurants: RestaurantListItem[] }) {
+export function RestaurantList({
+  restaurants,
+  canManage = true,
+}: {
+  restaurants: RestaurantListItem[];
+  canManage?: boolean;
+}) {
   const [items, setItems] = useState(restaurants);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const itemsRef = useRef(restaurants);
@@ -30,12 +36,14 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
   }, [restaurants]);
 
   function persist(next: RestaurantListItem[]) {
+    if (!canManage) return;
     startTransition(async () => {
       await reorderRestaurants(next.map((item) => item.id));
     });
   }
 
   function onPointerDown(event: React.PointerEvent<HTMLButtonElement>, id: string) {
+    if (!canManage) return;
     if (event.button !== 0) return;
     event.preventDefault();
     originRef.current = itemsRef.current.map((item) => item.id);
@@ -76,7 +84,9 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted">Kéo biểu tượng để đổi thứ tự hiển thị trên trang QR.</p>
+      {canManage ? (
+        <p className="text-sm text-muted">Kéo biểu tượng để đổi thứ tự hiển thị trên trang QR.</p>
+      ) : null}
       <ul className="space-y-3">
         {items.map((restaurant) => {
           const dragging = restaurant.id === draggingId;
@@ -90,17 +100,19 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-2">
-                  <button
-                    type="button"
-                    aria-label={`Kéo để sắp xếp ${restaurant.name}`}
-                    onPointerDown={(event) => onPointerDown(event, restaurant.id)}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={onPointerUp}
-                    className="mt-0.5 flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted transition-colors duration-200 hover:bg-background hover:text-primary active:cursor-grabbing"
-                  >
-                    <GripVertical className="h-5 w-5" />
-                  </button>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      aria-label={`Kéo để sắp xếp ${restaurant.name}`}
+                      onPointerDown={(event) => onPointerDown(event, restaurant.id)}
+                      onPointerMove={onPointerMove}
+                      onPointerUp={onPointerUp}
+                      onPointerCancel={onPointerUp}
+                      className="mt-0.5 flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted transition-colors duration-200 hover:bg-background hover:text-primary active:cursor-grabbing"
+                    >
+                      <GripVertical className="h-5 w-5" />
+                    </button>
+                  ) : null}
                   <div className="min-w-0">
                     <p className="font-heading text-xl">{restaurant.name}</p>
                     <p className="text-sm text-muted">
@@ -111,12 +123,14 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/admin/restaurants/${restaurant.id}`}
-                    className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border-2 border-primary px-3 font-medium text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
-                  >
-                    Thông tin
-                  </Link>
+                  {canManage ? (
+                    <Link
+                      href={`/admin/restaurants/${restaurant.id}`}
+                      className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border-2 border-primary px-3 font-medium text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
+                    >
+                      Thông tin
+                    </Link>
+                  ) : null}
                   <Link
                     href={`/admin/restaurants/${restaurant.id}/menu`}
                     className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-primary px-3 font-medium text-white transition-colors duration-200 hover:bg-primary-dark"
